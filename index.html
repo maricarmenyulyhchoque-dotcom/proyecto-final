@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>FoodFast ULTRA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --rojo:#c62828;--verde:#25d366;--osc:#1f1f1f;--gris:#f4f4f4;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--gris)}
+.hidden{display:none}
+
+/* LOGIN */
+.login{height:100vh;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(45deg,#b71c1c,#ff5252)}
+.login-box{background:#fff;padding:30px;border-radius:18px;width:320px;text-align:center}
+.login-box input,.login-box button{width:100%;padding:12px;margin:8px 0}
+.login-box button{background:var(--rojo);color:#fff;border:none}
+
+/* HEADER */
+header{background:linear-gradient(45deg,var(--rojo),#ff5252);color:#fff;padding:18px;
+display:flex;justify-content:space-between;align-items:center}
+
+/* TAGS */
+.tags{display:flex;gap:10px;overflow:auto;padding:10px}
+.tag{background:#fff;padding:8px 14px;border-radius:20px;cursor:pointer;white-space:nowrap}
+
+/* MENU */
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+gap:18px;padding:20px}
+.card{background:#fff;border-radius:18px;padding:14px;box-shadow:0 10px 25px rgba(0,0,0,.2);
+position:relative;transition:.3s}
+.card:hover{transform:translateY(-8px)}
+.badge{position:absolute;top:10px;left:10px;background:#ff5252;color:#fff;
+padding:4px 8px;border-radius:10px;font-size:12px}
+.card img{width:100%;border-radius:14px}
+.card button{width:100%;padding:10px;background:var(--rojo);color:#fff;border:none;margin-top:8px}
+
+/* CART */
+.cart{background:#fff;margin:20px;padding:20px;border-radius:18px;
+box-shadow:0 10px 25px rgba(0,0,0,.2)}
+.cart-item{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:8px 0}
+.total{font-size:22px;color:var(--rojo);font-weight:bold}
+.btn{width:100%;padding:14px;background:var(--verde);color:#fff;border:none;font-size:18px}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+align-items:center;justify-content:center}
+.modal-box{background:#fff;padding:25px;border-radius:18px;width:90%;max-width:420px}
+.modal-box input,.modal-box select,.modal-box button{width:100%;padding:10px;margin:6px 0}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="login">
+  <div class="login-box">
+    <h2>🔥 FoodFast ULTRA</h2>
+    <input id="user" placeholder="Usuario">
+    <input id="pass" type="password" placeholder="Contraseña">
+    <button onclick="loginUser()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<header>
+  <h1>🍔 FoodFast</h1>
+  <small>🎉 Delivery gratis desde S/60 | ⏰ Happy Hour -10%</small>
+</header>
+
+<div class="tags">
+  <div class="tag" onclick="filtrar('Todos')">Todos</div>
+  <div class="tag" onclick="filtrar('Burgers')">Burgers</div>
+  <div class="tag" onclick="filtrar('Pollos')">Pollos</div>
+  <div class="tag" onclick="filtrar('Criollo')">Criollo</div>
+  <div class="tag" onclick="filtrar('Bebidas')">Bebidas</div>
+  <div class="tag" onclick="filtrar('Postres')">Postres</div>
+</div>
+
+<section class="menu" id="menu"></section>
+
+<section class="cart">
+  <h2>🛒 Carrito</h2>
+  <div id="cart"></div>
+
+  <input id="cupon" placeholder="Cupón (FAST10)">
+  <select id="tipo" onchange="calcular()">
+    <option value="Delivery">Delivery</option>
+    <option value="Recojo">Recojo</option>
+  </select>
+  <select id="pago">
+    <option>Efectivo</option><option>Yape</option><option>Plin</option><option>Tarjeta</option>
+  </select>
+
+  <p class="total">Total: S/ <span id="total">0.00</span></p>
+  <button class="btn" onclick="abrirModal()">Finalizar Pedido</button>
+</section>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Confirmar Pedido</h3>
+    <input id="nombre" placeholder="Nombre">
+    <input id="telefono" placeholder="Teléfono">
+    <input id="direccion" placeholder="Dirección">
+    <button onclick="confirmar()">Confirmar</button>
+    <button onclick="cerrarModal()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const WHATSAPP="51973371454";
+const FREE_DELIVERY=60;
+
+const productos=[
+ {n:"Burger Clásica",p:15,c:"Burgers",promo:false,i:"https://images.unsplash.com/photo-1550547660-d9450f859349"},
+ {n:"Burger Doble Queso",p:20,c:"Burgers",promo:true,i:"https://images.unsplash.com/photo-1550547660-d9450f859349"},
+ {n:"Pollo Broaster",p:22,c:"Pollos",promo:false,i:"https://images.unsplash.com/photo-1606755962773-0c8cbbf1d5c1"},
+ {n:"Combo Familiar",p:55,c:"Pollos",promo:true,i:"https://images.unsplash.com/photo-1606755962773-0c8cbbf1d5c1"},
+ {n:"Lomo Saltado",p:25,c:"Criollo",promo:false,i:"https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec"},
+ {n:"Arroz con Pollo",p:23,c:"Criollo",promo:true,i:"https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec"},
+ {n:"Gaseosa 1L",p:6,c:"Bebidas",promo:false,i:"https://images.unsplash.com/photo-1622483767028-3f66f32aef97"},
+ {n:"Chicha Morada",p:5,c:"Bebidas",promo:false,i:"https://images.unsplash.com/photo-1622483767028-3f66f32aef97"},
+ {n:"Brownie",p:8,c:"Postres",promo:false,i:"https://images.unsplash.com/photo-1599785209707-28c9a3f5a2c1"},
+ {n:"Cheesecake",p:10,c:"Postres",promo:true,i:"https://images.unsplash.com/photo-1599785209707-28c9a3f5a2c1"}
+];
+
+let carrito=[],categoria="Todos";
+
+/* LOGIN */
+function loginUser(){
+ if(user.value && pass.value){login.classList.add("hidden");app.classList.remove("hidden");renderMenu();}
+ else alert("Complete los datos");
+}
+
+/* MENU */
+function filtrar(cat){categoria=cat;renderMenu()}
+function renderMenu(){
+ menu.innerHTML="";
+ productos.filter(p=>categoria=="Todos"||p.c==categoria)
+ .forEach((p,i)=>{
+  menu.innerHTML+=`
+  <div class="card">
+    ${p.promo?'<div class="badge">PROMO</div>':''}
+    <img src="${p.i}">
+    <h3>${p.n}</h3>
+    <p>S/ ${p.p}</p>
+    <button onclick="agregar(${i})">Agregar</button>
+  </div>`;
+ });
+}
+
+/* CARRITO */
+function agregar(i){
+ let it=carrito.find(x=>x.n==productos[i].n);
+ if(it) it.q++;
+ else carrito.push({...productos[i],q:1});
+ renderCart();
+}
+function renderCart(){
+ cart.innerHTML="";
+ carrito.forEach((p,i)=>{
+  cart.innerHTML+=`
+  <div class="cart-item">
+    ${p.q}x ${p.n}
+    <div>
+      <button onclick="p.q--;if(p.q<=0)carrito.splice(${i},1);renderCart()">-</button>
+      <button onclick="p.q++;renderCart()">+</button>
+    </div>
+  </div>`;
+ });
+ calcular();
+}
+function calcular(){
+ let t=carrito.reduce((s,p)=>s+p.p*p.q,0);
+ let hour=new Date().getHours();
+ if(hour>=16&&hour<=18) t*=0.9; // Happy Hour -10%
+ if(cupon.value=="FAST10") t*=0.9;
+ if(tipo.value=="Delivery" && t<FREE_DELIVERY) t+=5;
+ total.innerText=t.toFixed(2);
+}
+
+/* MODAL */
+function abrirModal(){if(!carrito.length)return alert("Carrito vacío");modal.style.display="flex"}
+function cerrarModal(){modal.style.display="none"}
+function confirmar(){
+ let msg="*🔥 FOODFAST ULTRA*%0A";
+ carrito.forEach(p=>msg+=`${p.q}x ${p.n} S/${p.p*p.q}%0A`);
+ msg+=`Total: S/${total.innerText}%0A`;
+ msg+=`Nombre: ${nombre.value}%0A`;
+ msg+=`Tel: ${telefono.value}%0A`;
+ msg+=`Dir: ${direccion.value}%0A`;
+ msg+=`Pago: ${pago.value}`;
+ alert("🎉 Compra exitosa");
+ window.open(`https://wa.me/${WHATSAPP}?text=${msg}`);
+ cerrarModal();
+}
+</script>
+
+</body>
+</html>
+
+
+
+
+
